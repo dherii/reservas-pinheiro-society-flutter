@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "199647764096",
+    "project_id": "reservas-pinheiro-society",
+    "storage_bucket": "reservas-pinheiro-society.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:199647764096:android:5947a72d95f1ba4d411065",
+        "android_client_info": {
+          "package_name": "com.example.reservas_pinheirosociety"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC46eu2FthZVMIM6oVNeGlMbZa15-kmZgo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:reservas_pinheirosociety/screens/auth/login_screen.dart';
+import 'package:reservas_pinheirosociety/screens/auth_gate.dart';
+import 'firebase_options.dart';
 
-// 1. O Ponto de Partida
-// Todo app começa na função main(). O runApp() "infla" o seu widget raiz na tela.
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const PinheiroSocietyApp());
 }
 
-// 2. O Widget Raiz (Root)
-// Este é o "Gerente" do app. Ele define o título, tema e qual é a primeira tela.
 class PinheiroSocietyApp extends StatelessWidget {
   const PinheiroSocietyApp({super.key});
 
@@ -15,16 +19,13 @@ class PinheiroSocietyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Reservas Pinheiro Society',
-      debugShowCheckedModeBanner: false, // Remove aquela faixinha "DEBUG" no canto
-      
-      // Configuração de Cores e Estilo
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green), // Verde futebol!
-        useMaterial3: true, // Usa o design system mais novo do Google
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        useMaterial3: true,
       ),
-      
-      // Qual tela aparece primeiro?
-      home: const TelaExemplo(),
+
+      home: const AuthGate(),
     );
   }
 }
@@ -42,7 +43,7 @@ class TelaExemplo extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Pinheiro Society Admin'),
       ),
-      
+
       // Corpo da página
       body: Center(
         child: Column(
