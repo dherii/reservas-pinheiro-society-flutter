@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:reservas_pinheirosociety/screens/auth/login_screen.dart';
+// import 'package:reservas_pinheirosociety/screens/auth/login_screen.dart';
 import 'package:reservas_pinheirosociety/screens/auth_gate.dart';
 import 'firebase_options.dart';
 

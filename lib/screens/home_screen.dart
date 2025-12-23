@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/user_services.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import 'admin/admin_home_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -41,41 +42,11 @@ class HomeScreen extends StatelessWidget {
         final UserModel user = snapshot.data!;
 
         if (user.isAdmin) {
-          return _buildAdminScreen(user);
+          return AdminHomeScreen(user: user);
         } else {
           return _buildClientScreen(user);
         }
       },
-    );
-  }
-
-  Widget _buildAdminScreen(UserModel user) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Painel do Dono"),
-        backgroundColor: Colors.blueGrey, // Cor mais séria para admin
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            onPressed: () => AuthService().logout(),
-          ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.admin_panel_settings,
-              size: 80,
-              color: Colors.blueGrey,
-            ),
-            const SizedBox(height: 16),
-            Text("Olá, ${user.nome}!", style: const TextStyle(fontSize: 24)),
-            const Text("Aqui você vai gerenciar os campos."),
-          ],
-        ),
-      ),
     );
   }
 

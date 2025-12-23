@@ -44,6 +44,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (mounted) {
       setState(() => _isLoading = false);
     }
+
+    if (erro != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(erro), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
