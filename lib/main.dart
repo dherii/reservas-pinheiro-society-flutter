@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-// import 'package:reservas_pinheirosociety/screens/auth/login_screen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'; // <--- Importante para Pt-Br
 import 'package:reservas_pinheirosociety/screens/auth_gate.dart';
 import 'firebase_options.dart';
 
@@ -20,44 +20,34 @@ class PinheiroSocietyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Reservas Pinheiro Society',
       debugShowCheckedModeBanner: false,
+
+      // CONFIGURAÇÃO DE TEMA
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.green,
+          brightness: Brightness.light, // Força modo claro por enquanto
+        ),
         useMaterial3: true,
-      ),
-
-      home: const AuthGate(),
-    );
-  }
-}
-
-// 3. Uma Tela de Exemplo (Scaffold)
-// Enquanto o MaterialApp é o App inteiro, o Scaffold é o esqueleto de UMA página.
-class TelaExemplo extends StatelessWidget {
-  const TelaExemplo({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      // Barra superior
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Pinheiro Society Admin'),
-      ),
-
-      // Corpo da página
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.sports_soccer, size: 100, color: Colors.green),
-            SizedBox(height: 20), // Espaçamento invisível
-            Text(
-              'Bora pro jogo!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ],
+        // Dica visual: Deixa os Inputs com um estilo mais moderno por padrão
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.grey[50],
         ),
       ),
+
+      // CONFIGURAÇÃO DE IDIOMA (PT-BR) 🇧🇷
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations
+            .delegate, // Importante para o DatePicker do iOS/Cupertino
+      ],
+      supportedLocales: const [
+        Locale('pt', 'BR'), // Português do Brasil
+      ],
+
+      home: const AuthGate(),
     );
   }
 }

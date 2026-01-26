@@ -1,11 +1,18 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class BookingModel {
   final String id;
   final String campoId;
   final String campoNome;
-  final String usuarioId;
+
+  // Pode ser nulo se for uma reserva manual feita pelo Admin
+  final String? usuarioId;
   final String usuarioNome;
+
   final DateTime dataHorarioInicio;
   final DateTime dataHorarioFim;
+
+  // 'confirmado', 'pendente', 'cancelado', 'concluido'
   final String status;
   final double valorTotal;
 
@@ -13,7 +20,7 @@ class BookingModel {
     required this.id,
     required this.campoId,
     required this.campoNome,
-    required this.usuarioId,
+    this.usuarioId,
     required this.usuarioNome,
     required this.dataHorarioInicio,
     required this.dataHorarioFim,
@@ -21,6 +28,7 @@ class BookingModel {
     required this.valorTotal,
   });
 
+  // --- CopyWith (editar reservas) ---
   BookingModel copyWith({
     String? id,
     String? campoId,
@@ -51,61 +59,51 @@ class BookingModel {
       'campoNome': campoNome,
       'usuarioId': usuarioId,
       'usuarioNome': usuarioNome,
-      'dataHorarioInicio': dataHorarioInicio.millisecondsSinceEpoch,
-      'dataHorarioFim': dataHorarioFim.millisecondsSinceEpoch,
+      'dataHorarioInicio': Timestamp.fromDate(dataHorarioInicio),
+      'dataHorarioFim': Timestamp.fromDate(dataHorarioFim),
       'status': status,
       'valorTotal': valorTotal,
     };
   }
 
+  // --- Para ler do Firebase ---
   factory BookingModel.fromMap(Map<String, dynamic> map, String documentId) {
     return BookingModel(
       id: documentId,
-      campoId: map['campoId'] as String,
-      campoNome: map['campoNome'] as String,
-      usuarioId: map['usuarioId'] as String,
-      usuarioNome: map['usuarioNome'] as String,
-      dataHorarioInicio: DateTime.fromMillisecondsSinceEpoch(
-        map['dataHorarioInicio'] as int,
-      ),
-      dataHorarioFim: DateTime.fromMillisecondsSinceEpoch(
-        map['dataHorarioFim'] as int,
-      ),
-      status: map['status'] as String,
-      valorTotal: (map['valorTotal'] as num).toDouble(),
+      campoId: map['campoId'] ?? '',
+      campoNome: map['campoNome'] ?? '',
+      usuarioId: map['usuarioId'], // Pode vir nulo
+      usuarioNome: map['usuarioNome'] ?? 'Cliente Desconhecido',
+
+      dataHorarioInicio: (map['dataHorarioInicio'] as Timestamp).toDate(),
+      dataHorarioFim: (map['dataHorarioFim'] as Timestamp).toDate(),
+
+      status: map['status'] ?? 'pendente',
+      valorTotal: (map['valorTotal'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
   @override
   String toString() {
-    return 'BookingModel(id: $id, campoId: $campoId, campoNome: $campoNome, usuarioId: $usuarioId, usuarioNome: $usuarioNome, dataHorarioInicio: $dataHorarioInicio, dataHorarioFim: $dataHorarioFim, status: $status, valorTotal: $valorTotal)';
+    return 'BookingModel(id: $id, campo: $campoNome, cliente: $usuarioNome, inicio: $dataHorarioInicio, status: $status)';
   }
 
   @override
   bool operator ==(covariant BookingModel other) {
     if (identical(this, other)) return true;
-
     return other.id == id &&
         other.campoId == campoId &&
-        other.campoNome == campoNome &&
         other.usuarioId == usuarioId &&
-        other.usuarioNome == usuarioNome &&
         other.dataHorarioInicio == dataHorarioInicio &&
-        other.dataHorarioFim == dataHorarioFim &&
-        other.status == status &&
-        other.valorTotal == valorTotal;
+        other.status == status;
   }
 
   @override
   int get hashCode {
     return id.hashCode ^
         campoId.hashCode ^
-        campoNome.hashCode ^
         usuarioId.hashCode ^
-        usuarioNome.hashCode ^
         dataHorarioInicio.hashCode ^
-        dataHorarioFim.hashCode ^
-        status.hashCode ^
-        valorTotal.hashCode;
+        status.hashCode;
   }
 }
