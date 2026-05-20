@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'; // <--- Importante para Pt-Br
-import 'package:reservas_pinheirosociety/screens/auth_gate.dart';
+import 'package:reservas_pinheirosociety/screens/home_screen.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -47,7 +47,7 @@ class PinheiroSocietyApp extends StatelessWidget {
         Locale('pt', 'BR'), // Português do Brasil
       ],
 
-      home: const AuthGate(),
+      home: const HomeScreen(),
     );
   }
 }
