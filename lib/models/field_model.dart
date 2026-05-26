@@ -3,11 +3,14 @@ class FieldModel {
   final String nome;
   final double precoPorHora;
   final String descricao;
+  final int intervaloMinutos;
+
   FieldModel({
     required this.id,
     required this.nome,
     required this.precoPorHora,
     required this.descricao,
+    this.intervaloMinutos = 0,
   });
 
   FieldModel copyWith({
@@ -29,6 +32,7 @@ class FieldModel {
       'nome': nome,
       'precoPorHora': precoPorHora,
       'descricao': descricao,
+      'intervaloMinutos': intervaloMinutos,
     };
   }
 
@@ -38,6 +42,7 @@ class FieldModel {
       nome: map['nome'] ?? '',
       precoPorHora: (map['precoPorHora'] as num?)?.toDouble() ?? 0.0,
       descricao: map['descricao'] ?? '',
+      intervaloMinutos: (map['intervaloMinutos'] as num?)?.toInt() ?? 0,
     );
   }
 

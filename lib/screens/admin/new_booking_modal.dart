@@ -18,6 +18,7 @@ class _NewBookingModalState extends State<NewBookingModal> {
   final _bookingService = BookingService();
   final _formKey = GlobalKey<FormState>();
   final _clientNameController = TextEditingController();
+  bool _pagamentoConfirmado = false;
 
   FieldModel? _selectedField;
   DateTime _selectedDate = DateTime.now();
@@ -54,6 +55,7 @@ class _NewBookingModalState extends State<NewBookingModal> {
         descricao: '',
       );
 
+      _pagamentoConfirmado = b.statusPagamento != 'pendente';
       _checkAvailability();
     }
   }
@@ -159,11 +161,15 @@ class _NewBookingModalState extends State<NewBookingModal> {
       id: _isEditing ? widget.bookingToEdit!.id : '',
       campoId: _selectedField!.id,
       campoNome: _selectedField!.nome,
-      usuarioId: null,
+      usuarioId: _isEditing ? widget.bookingToEdit!.usuarioId : null,
       usuarioNome: _clientNameController.text,
       dataHorarioInicio: startDateTime,
       dataHorarioFim: endDateTime,
-      status: 'confirmado',
+      status: _pagamentoConfirmado ? 'confirmado' : 'pendente',
+      statusPagamento: _pagamentoConfirmado ? 'sinal_pago' : 'pendente',
+      metodoPagamento: _isEditing
+          ? widget.bookingToEdit!.metodoPagamento
+          : 'dinheiro',
       valorTotal: _selectedField!.precoPorHora,
     );
 
@@ -375,6 +381,49 @@ class _NewBookingModalState extends State<NewBookingModal> {
 
                   const SizedBox(height: 32),
 
+                  if (_isEditing) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
+                        color: _pagamentoConfirmado
+                            ? Colors.green.shade50
+                            : Colors.orange.shade50,
+                        border: Border.all(
+                          color: _pagamentoConfirmado
+                              ? Colors.green.shade300
+                              : Colors.orange.shade300,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: SwitchListTile(
+                        title: Text(
+                          _pagamentoConfirmado
+                              ? "Pagamento Confirmado"
+                              : "Aguardando Pagamento (Pix)",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: _pagamentoConfirmado
+                                ? Colors.green.shade700
+                                : Colors.orange.shade900,
+                          ),
+                        ),
+                        value: _pagamentoConfirmado,
+                        activeColor: Colors.green,
+                        onChanged: (bool value) {
+                          setState(() {
+                            _pagamentoConfirmado = value;
+                          });
+                        },
+                        secondary: Icon(
+                          _pagamentoConfirmado ? Icons.check_circle : Icons.pix,
+                          color: _pagamentoConfirmado
+                              ? Colors.green
+                              : Colors.orange.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
@@ -389,8 +438,10 @@ class _NewBookingModalState extends State<NewBookingModal> {
                           ? const CircularProgressIndicator(color: Colors.white)
                           : Text(
                               _isEditing
-                                  ? "SALVAR ALTERAÇÕES"
-                                  : "CONFIRMAR RESERVA",
+                                  ? (widget.bookingToEdit!.status == 'pendente'
+                                        ? "SALVAR CONFIRMAÇÃO"
+                                        : "SALVAR ALTERAÇÕES")
+                                  : "CRIAR RESERVA",
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -398,6 +449,7 @@ class _NewBookingModalState extends State<NewBookingModal> {
                     ),
                   ),
 
+                  // Botão de Excluir
                   if (_isEditing) ...[
                     const SizedBox(height: 12),
                     TextButton.icon(

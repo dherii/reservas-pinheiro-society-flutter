@@ -1,14 +1,14 @@
 class UserModel {
   final String id;
   final String nome;
-  final String email;
+  final String? email; // Alterado para opcional (pode ser nulo)
   final String telefone;
   final bool isAdmin;
 
   UserModel({
     required this.id,
     required this.nome,
-    required this.email,
+    this.email, // Retirado o 'required'
     required this.telefone,
     this.isAdmin = false,
   });
@@ -32,7 +32,8 @@ class UserModel {
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'nome': nome,
-      'email': email,
+      // Só salva o email no Firebase se ele não for nulo
+      if (email != null) 'email': email,
       'telefone': telefone,
       'isAdmin': isAdmin,
     };
@@ -42,7 +43,7 @@ class UserModel {
     return UserModel(
       id: documentId,
       nome: map['nome'] ?? '',
-      email: map['email'] ?? '',
+      email: map['email'], // Pode vir nulo do Firebase sem problemas
       telefone: map['telefone'] ?? '',
       isAdmin: map['isAdmin'] ?? false,
     );

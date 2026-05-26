@@ -81,7 +81,7 @@ class BookingFieldSelector extends StatelessWidget {
         }
 
         return DropdownButtonFormField<FieldModel>(
-          value: valueToUse,
+          initialValue: valueToUse,
           isExpanded: true,
           decoration: const InputDecoration(
             labelText: "Quadra",
@@ -132,8 +132,9 @@ class BookingTimeGrid extends StatelessWidget {
             originalDate != null &&
             originalFieldId == currentFieldId) {
           final original = TimeOfDay.fromDateTime(originalDate!);
-          if (oc.hour == original.hour && oc.minute == original.minute)
+          if (oc.hour == original.hour && oc.minute == original.minute) {
             return false;
+          }
         }
         return oc.hour == slot.hour && oc.minute == slot.minute;
       });
@@ -189,8 +190,9 @@ class BookingTimeGrid extends StatelessWidget {
                 (oc.hour == original.hour && oc.minute == original.minute);
             bool isSameField = (originalFieldId == currentFieldId);
 
-            if (isSameTime && isSameField)
+            if (isSameTime && isSameField) {
               return false; // É minha reserva, libera.
+            }
           }
           return oc.hour == slot.hour && oc.minute == slot.minute;
         });

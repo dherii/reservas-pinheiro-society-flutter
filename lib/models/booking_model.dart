@@ -16,6 +16,12 @@ class BookingModel {
   final String status;
   final double valorTotal;
 
+  // --- Cmpos de Pagamento ---
+  final String
+  metodoPagamento; // ex: 'pix', 'dinheiro', 'cartao', 'nao_informado'
+  final String statusPagamento; // ex: 'pendente', 'sinal_pago', 'pago_total'
+  final double valorPago;
+
   BookingModel({
     required this.id,
     required this.campoId,
@@ -26,6 +32,9 @@ class BookingModel {
     required this.dataHorarioFim,
     required this.status,
     required this.valorTotal,
+    this.metodoPagamento = 'nao_informado', // Valores padrão
+    this.statusPagamento = 'pendente', // Valores padrão
+    this.valorPago = 0.0, // Valores padrão
   });
 
   // --- CopyWith (editar reservas) ---
@@ -39,6 +48,9 @@ class BookingModel {
     DateTime? dataHorarioFim,
     String? status,
     double? valorTotal,
+    String? metodoPagamento,
+    String? statusPagamento,
+    double? valorPago,
   }) {
     return BookingModel(
       id: id ?? this.id,
@@ -50,6 +62,9 @@ class BookingModel {
       dataHorarioFim: dataHorarioFim ?? this.dataHorarioFim,
       status: status ?? this.status,
       valorTotal: valorTotal ?? this.valorTotal,
+      metodoPagamento: metodoPagamento ?? this.metodoPagamento,
+      statusPagamento: statusPagamento ?? this.statusPagamento,
+      valorPago: valorPago ?? this.valorPago,
     );
   }
 
@@ -63,6 +78,9 @@ class BookingModel {
       'dataHorarioFim': Timestamp.fromDate(dataHorarioFim),
       'status': status,
       'valorTotal': valorTotal,
+      'metodoPagamento': metodoPagamento,
+      'statusPagamento': statusPagamento,
+      'valorPago': valorPago,
     };
   }
 
@@ -80,12 +98,17 @@ class BookingModel {
 
       status: map['status'] ?? 'pendente',
       valorTotal: (map['valorTotal'] as num?)?.toDouble() ?? 0.0,
+
+      // Tratamento seguro para os novos campos
+      metodoPagamento: map['metodoPagamento'] ?? 'nao_informado',
+      statusPagamento: map['statusPagamento'] ?? 'pendente',
+      valorPago: (map['valorPago'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
   @override
   String toString() {
-    return 'BookingModel(id: $id, campo: $campoNome, cliente: $usuarioNome, inicio: $dataHorarioInicio, status: $status)';
+    return 'BookingModel(id: $id, campo: $campoNome, cliente: $usuarioNome, status: $status, pagto: $statusPagamento)';
   }
 
   @override
@@ -95,7 +118,8 @@ class BookingModel {
         other.campoId == campoId &&
         other.usuarioId == usuarioId &&
         other.dataHorarioInicio == dataHorarioInicio &&
-        other.status == status;
+        other.status == status &&
+        other.statusPagamento == statusPagamento;
   }
 
   @override
@@ -104,6 +128,7 @@ class BookingModel {
         campoId.hashCode ^
         usuarioId.hashCode ^
         dataHorarioInicio.hashCode ^
-        status.hashCode;
+        status.hashCode ^
+        statusPagamento.hashCode;
   }
 }

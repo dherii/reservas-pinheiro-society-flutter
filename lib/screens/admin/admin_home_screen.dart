@@ -195,6 +195,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 
   // 3. Lista de Reservas (Filtrada e com NOVO CARD)
+  // 3. Lista de Reservas (Filtrada e com NOVO CARD DINÂMICO)
   Widget _buildBookingList() {
     final startOfDay = DateTime(
       _selectedDate.year,
@@ -252,7 +253,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 Icon(Icons.event_busy, size: 60, color: Colors.grey[300]),
                 const SizedBox(height: 10),
                 Text(
-                  "Agenda livre para ${_dateTitle}!",
+                  "Agenda livre para $_dateTitle!",
                   style: const TextStyle(color: Colors.grey),
                 ),
               ],
@@ -277,7 +278,21 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               'HH:mm',
             ).format(booking.dataHorarioFim);
 
-            // --- AQUI ESTÁ O NOVO DESIGN DO CARD ---
+            // --- LÓGICA DE CORES DOS STATUS ---
+            Color statusColor;
+            String statusText;
+
+            if (booking.status == 'pendente') {
+              statusColor = Colors.orange;
+              statusText = 'Aguardando Pix';
+            } else if (booking.status == 'confirmado') {
+              statusColor = Colors.green;
+              statusText = 'Confirmado';
+            } else {
+              statusColor = Colors.grey;
+              statusText = 'Cancelado';
+            }
+
             return Card(
               elevation: 4,
               margin: const EdgeInsets.only(bottom: 16),
@@ -288,7 +303,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 onTap: () {
-                  // Ao clicar, abrimos o Modal em modo de EDIÇÃO
+                  // Abre o Modal para visualizar/aprovar a reserva
                   showModalBottomSheet(
                     context: context,
                     isScrollControlled: true,
@@ -298,19 +313,20 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   );
                 },
                 child: Container(
-                  height: 100,
+                  height:
+                      110, // Aumentei um pouquinho para caber a tag de status
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     color: Colors.white,
                   ),
                   child: Row(
                     children: [
-                      // 1. Faixa Lateral Verde (Indicador Visual)
+                      // 1. Faixa Lateral Dinâmica (Muda de cor conforme o status)
                       Container(
-                        width: 6,
-                        decoration: const BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.only(
+                        width: 8,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          borderRadius: const BorderRadius.only(
                             topLeft: Radius.circular(16),
                             bottomLeft: Radius.circular(16),
                           ),
@@ -352,21 +368,51 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
+                            horizontal: 12,
                             vertical: 12,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                booking.usuarioNome,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      booking.usuarioNome,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  // TAG DE STATUS (Laranja ou Verde)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withOpacity(0.1),
+                                      border: Border.all(
+                                        color: statusColor.withOpacity(0.5),
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      statusText,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: statusColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 6),
                               Row(
@@ -382,6 +428,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                                     style: TextStyle(
                                       color: Colors.grey.shade700,
                                       fontWeight: FontWeight.w500,
+                                      fontSize: 13,
                                     ),
                                   ),
                                   const Spacer(),
@@ -391,13 +438,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.green.shade50,
+                                      color: Colors.grey.shade100,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       "R\$ ${booking.valorTotal.toStringAsFixed(0)}",
                                       style: TextStyle(
-                                        color: Colors.green.shade800,
+                                        color: Colors.black87,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 12,
                                       ),
@@ -410,9 +457,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                         ),
                       ),
 
-                      // 4. Ícone de Seta (Indicando clique)
+                      // 4. Ícone de Seta
                       Padding(
-                        padding: const EdgeInsets.only(right: 16),
+                        padding: const EdgeInsets.only(right: 12),
                         child: Icon(
                           Icons.arrow_forward_ios,
                           size: 14,
