@@ -5,8 +5,9 @@ import '../../models/booking_model.dart';
 import '../../models/field_model.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
-import 'add_field_modal.dart';
 import 'new_booking_modal.dart';
+import 'admin_settings_screen.dart';
+import 'field_management_screen.dart'; // <-- NOVA TELA
 
 class AdminHomeScreen extends StatefulWidget {
   final UserModel user;
@@ -18,11 +19,9 @@ class AdminHomeScreen extends StatefulWidget {
 }
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
-  // Estado dos Filtros
   DateTime _selectedDate = DateTime.now();
-  String? _selectedFieldId; // Se null, mostra "Todos"
+  String? _selectedFieldId;
 
-  // Helpers de Data
   String get _dateTitle {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -35,15 +34,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     if (selected == today) return "Hoje";
     if (selected == today.add(const Duration(days: 1))) return "Amanhã";
     if (selected == today.subtract(const Duration(days: 1))) return "Ontem";
-
     return DateFormat('dd/MM/yyyy', 'pt_BR').format(_selectedDate);
   }
 
-  void _changeDate(int days) {
-    setState(() {
-      _selectedDate = _selectedDate.add(Duration(days: days));
-    });
-  }
+  void _changeDate(int days) =>
+      setState(() => _selectedDate = _selectedDate.add(Duration(days: days)));
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -52,16 +47,108 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       firstDate: DateTime(2024),
       lastDate: DateTime(2030),
       locale: const Locale('pt', 'BR'),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(primary: Color(0xFF2E7D32)),
+        ),
+        child: child!,
+      ),
     );
     if (picked != null) setState(() => _selectedDate = picked);
   }
 
-  // --- WIDGETS DE UI ---
+  // ── DASHBOARD: métricas do mês atual ────────────────────────────────────────
+  Widget _buildDashboard() {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
-  // 1. Navegador de Data (< DATA >)
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('bookings')
+          .where(
+            'dataHorarioInicio',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
+          )
+          .where(
+            'dataHorarioInicio',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth),
+          )
+          .snapshots(),
+      builder: (context, snapshot) {
+        int totalMes = 0;
+        int confirmados = 0;
+        double receitaEstimada = 0;
+
+        if (snapshot.hasData) {
+          final bookings = snapshot.data!.docs
+              .map(
+                (d) => BookingModel.fromMap(
+                  d.data() as Map<String, dynamic>,
+                  d.id,
+                ),
+              )
+              .toList();
+
+          totalMes = bookings.length;
+          confirmados = bookings.where((b) => b.status == 'confirmado').length;
+          receitaEstimada = bookings
+              .where((b) => b.status != 'cancelado')
+              .fold(0.0, (sum, b) => sum + b.valorTotal);
+        }
+
+        return Container(
+          color: const Color(0xFF2E7D32),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  DateFormat("MMMM 'de' yyyy", 'pt_BR').format(now),
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  _MetricCard(
+                    label: 'Reservas no mês',
+                    value: '$totalMes',
+                    icon: Icons.calendar_month,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 10),
+                  _MetricCard(
+                    label: 'Confirmadas',
+                    value: '$confirmados',
+                    icon: Icons.check_circle_outline,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 10),
+                  _MetricCard(
+                    label: 'Receita estimada',
+                    value: 'R\$\n${receitaEstimada.toStringAsFixed(0)}',
+                    icon: Icons.attach_money,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ── NAVEGAÇÃO DE DATA ────────────────────────────────────────────────────────
   Widget _buildDateHeader() {
     return Container(
-      color: Colors.green,
+      color: const Color(0xFF2E7D32),
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -76,6 +163,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ),
           InkWell(
             onTap: _pickDate,
+            borderRadius: BorderRadius.circular(20),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -87,7 +175,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   const Icon(
                     Icons.calendar_today,
                     color: Colors.white,
-                    size: 18,
+                    size: 16,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -95,7 +183,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      fontSize: 17,
                     ),
                   ),
                 ],
@@ -115,22 +203,22 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  // 2. Lista Horizontal de Quadras (Tabs)
+  // ── TABS DE QUADRAS ──────────────────────────────────────────────────────────
   Widget _buildFieldTabs() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('fields').snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox();
+        if (!snapshot.hasData) return const SizedBox(height: 52);
 
         final fields = snapshot.data!.docs;
 
         return Container(
-          height: 60,
+          height: 52,
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.black.withOpacity(0.06),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -138,53 +226,22 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ),
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             children: [
-              // Botão "Todos"
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: const Text("Todos"),
-                  selected: _selectedFieldId == null,
-                  onSelected: (bool selected) {
-                    setState(() => _selectedFieldId = null);
-                  },
-                  selectedColor: Colors.green.withOpacity(0.2),
-                  labelStyle: TextStyle(
-                    color: _selectedFieldId == null
-                        ? Colors.green
-                        : Colors.black,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              _FieldTab(
+                label: 'Todos',
+                isSelected: _selectedFieldId == null,
+                onTap: () => setState(() => _selectedFieldId = null),
               ),
-
-              // Botões das Quadras Reais
               ...fields.map((doc) {
                 final field = FieldModel.fromMap(
                   doc.data() as Map<String, dynamic>,
                   doc.id,
                 );
-                final isSelected = _selectedFieldId == field.id;
-
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(field.nome),
-                    selected: isSelected,
-                    onSelected: (bool selected) {
-                      setState(
-                        () => _selectedFieldId = selected ? field.id : null,
-                      );
-                    },
-                    selectedColor: Colors.green.withOpacity(0.2),
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.green : Colors.black,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
+                return _FieldTab(
+                  label: field.nome,
+                  isSelected: _selectedFieldId == field.id,
+                  onTap: () => setState(() => _selectedFieldId = field.id),
                 );
               }),
             ],
@@ -194,15 +251,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  // 3. Lista de Reservas (Filtrada e com NOVO CARD)
-  // 3. Lista de Reservas (Filtrada e com NOVO CARD DINÂMICO)
+  // ── LISTA DE RESERVAS ────────────────────────────────────────────────────────
   Widget _buildBookingList() {
     final startOfDay = DateTime(
       _selectedDate.year,
       _selectedDate.month,
       _selectedDate.day,
-      0,
-      0,
     );
     final endOfDay = DateTime(
       _selectedDate.year,
@@ -222,253 +276,62 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         .where(
           'dataHorarioInicio',
           isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
-        );
+        )
+        .orderBy('dataHorarioInicio');
 
     if (_selectedFieldId != null) {
       query = query.where('campoId', isEqualTo: _selectedFieldId);
     }
-
-    query = query.orderBy('dataHorarioInicio');
 
     return StreamBuilder<QuerySnapshot>(
       stream: query.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child: CircularProgressIndicator(color: Colors.green),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return const Center(
-            child: Text("Erro ao carregar. Verifique sua conexão."),
+            child: CircularProgressIndicator(color: Color(0xFF2E7D32)),
           );
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Center(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.event_busy, size: 60, color: Colors.grey[300]),
-                const SizedBox(height: 10),
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 48,
+                  color: Colors.grey.shade300,
+                ),
+                const SizedBox(height: 12),
                 Text(
-                  "Agenda livre para $_dateTitle!",
-                  style: const TextStyle(color: Colors.grey),
+                  'Nenhuma reserva para $_dateTitle',
+                  style: TextStyle(color: Colors.grey.shade500),
                 ),
               ],
             ),
           );
         }
 
-        return ListView.builder(
+        final bookings = snapshot.data!.docs
+            .map(
+              (d) =>
+                  BookingModel.fromMap(d.data() as Map<String, dynamic>, d.id),
+            )
+            .toList();
+
+        return ListView.separated(
           padding: const EdgeInsets.all(16),
-          itemCount: snapshot.data!.docs.length,
+          itemCount: bookings.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
-            final doc = snapshot.data!.docs[index];
-            final booking = BookingModel.fromMap(
-              doc.data() as Map<String, dynamic>,
-              doc.id,
-            );
-
-            final timeStr = DateFormat(
-              'HH:mm',
-            ).format(booking.dataHorarioInicio);
-            final endTimeStr = DateFormat(
-              'HH:mm',
-            ).format(booking.dataHorarioFim);
-
-            // --- LÓGICA DE CORES DOS STATUS ---
-            Color statusColor;
-            String statusText;
-
-            if (booking.status == 'pendente') {
-              statusColor = Colors.orange;
-              statusText = 'Aguardando Pix';
-            } else if (booking.status == 'confirmado') {
-              statusColor = Colors.green;
-              statusText = 'Confirmado';
-            } else {
-              statusColor = Colors.grey;
-              statusText = 'Cancelado';
-            }
-
-            return Card(
-              elevation: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              shadowColor: Colors.black12,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  // Abre o Modal para visualizar/aprovar a reserva
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (context) =>
-                        NewBookingModal(bookingToEdit: booking),
-                  );
-                },
-                child: Container(
-                  height:
-                      110, // Aumentei um pouquinho para caber a tag de status
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    color: Colors.white,
-                  ),
-                  child: Row(
-                    children: [
-                      // 1. Faixa Lateral Dinâmica (Muda de cor conforme o status)
-                      Container(
-                        width: 8,
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            bottomLeft: Radius.circular(16),
-                          ),
-                        ),
-                      ),
-
-                      // 2. Coluna de Horário
-                      Container(
-                        width: 80,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          border: Border(
-                            right: BorderSide(color: Colors.grey.shade200),
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              timeStr,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            Text(
-                              "até $endTimeStr",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // 3. Conteúdo Principal (Infos)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      booking.usuarioNome,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  // TAG DE STATUS (Laranja ou Verde)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: statusColor.withOpacity(0.1),
-                                      border: Border.all(
-                                        color: statusColor.withOpacity(0.5),
-                                      ),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      statusText,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: statusColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.stadium,
-                                    size: 14,
-                                    color: Colors.green.shade700,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    booking.campoNome,
-                                    style: TextStyle(
-                                      color: Colors.grey.shade700,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      "R\$ ${booking.valorTotal.toStringAsFixed(0)}",
-                                      style: TextStyle(
-                                        color: Colors.black87,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // 4. Ícone de Seta
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Icon(
-                          Icons.arrow_forward_ios,
-                          size: 14,
-                          color: Colors.grey.shade300,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            final booking = bookings[index];
+            return _BookingCard(
+              booking: booking,
+              onTap: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => NewBookingModal(bookingToEdit: booking),
               ),
             );
           },
@@ -480,23 +343,32 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF5F7F5),
       appBar: AppBar(
-        title: const Text("Painel de Controle"),
-        backgroundColor: Colors.green,
+        title: const Text(
+          'Painel de Controle',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        backgroundColor: const Color(0xFF2E7D32),
+        foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.stadium),
-            tooltip: "Gerenciar Quadras",
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) => const AddFieldModal(),
-              );
-            },
+            icon: const Icon(Icons.stadium_outlined),
+            tooltip: 'Gerenciar Campos',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FieldManagementScreen()),
+            ),
+          ),
+          // NOVO: botão de configurações
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Configurações',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminSettingsScreen()),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.exit_to_app),
@@ -506,26 +378,301 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       ),
       body: Column(
         children: [
-          _buildDateHeader(), // 1. Navegação de Data
-          _buildFieldTabs(), // 2. Abas de Quadras
-          Expanded(child: _buildBookingList()), // 3. Lista Filtrada
+          _buildDashboard(), // ← NOVO: métricas do mês
+          _buildDateHeader(),
+          _buildFieldTabs(),
+          Expanded(child: _buildBookingList()),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF2E7D32),
         icon: const Icon(Icons.calendar_month, color: Colors.white),
         label: const Text(
-          "Nova Reserva",
-          style: TextStyle(color: Colors.white),
+          'Nova Reserva',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) => const NewBookingModal(),
-          );
-        },
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const NewBookingModal(),
+        ),
+      ),
+    );
+  }
+}
+
+// ── COMPONENTES ───────────────────────────────────────────────────────────────
+
+class _MetricCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                height: 1.1,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: color.withOpacity(0.75),
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FieldTab extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FieldTab({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF2E7D32) : const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF2E7D32)
+                : const Color(0xFFE0E0E0),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF757575),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingCard extends StatelessWidget {
+  final BookingModel booking;
+  final VoidCallback onTap;
+
+  const _BookingCard({required this.booking, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color statusColor;
+    final String statusText;
+
+    switch (booking.status) {
+      case 'confirmado':
+        statusColor = const Color(0xFF2E7D32);
+        statusText = 'Confirmado';
+        break;
+      case 'cancelado':
+        statusColor = const Color(0xFFD32F2F);
+        statusText = 'Cancelado';
+        break;
+      case 'concluido':
+        statusColor = const Color(0xFF1565C0);
+        statusText = 'Concluído';
+        break;
+      default:
+        statusColor = const Color(0xFFF57C00);
+        statusText = 'Pendente';
+    }
+
+    final timeStr =
+        "${booking.dataHorarioInicio.hour.toString().padLeft(2, '0')}:${booking.dataHorarioInicio.minute.toString().padLeft(2, '0')}";
+    final endTimeStr =
+        "${booking.dataHorarioFim.hour.toString().padLeft(2, '0')}:${booking.dataHorarioFim.minute.toString().padLeft(2, '0')}";
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 90,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Faixa lateral de status
+            Container(
+              width: 6,
+              decoration: BoxDecoration(
+                color: statusColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(14),
+                  bottomLeft: Radius.circular(14),
+                ),
+              ),
+            ),
+
+            // Horário
+            Container(
+              width: 76,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                border: Border(right: BorderSide(color: Colors.grey.shade100)),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    timeStr,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF1B1B1B),
+                    ),
+                  ),
+                  Text(
+                    'até $endTimeStr',
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
+
+            // Conteúdo principal
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            booking.usuarioNome,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            statusText,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: statusColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.stadium_outlined,
+                          size: 12,
+                          color: const Color(0xFF2E7D32),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          booking.campoNome,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          'R\$ ${booking.valorTotal.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Icon(
+                Icons.arrow_forward_ios,
+                size: 12,
+                color: Colors.grey.shade300,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
